@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Runtime state — persisted per-deployment
+state/
+
+# Service account credentials — never commit
+credentials/
+*.json
+
+# Local config overrides
+.env
+
+# Test cache
+.pytest_cache/

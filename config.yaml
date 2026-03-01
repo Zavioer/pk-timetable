@@ -1,0 +1,16 @@
+timetable_url: "https://example.com/timetable.xlsx"
+calendar_id: "your-calendar-id@group.calendar.google.com"
+credentials_path: "credentials/service_account.json"
+state_dir: "state"
+
+# Column mapping — use 0-based integer indices or exact header names from the xlsx.
+# Set header_row to the 0-based row index that contains column headers.
+columns:
+  header_row: 0
+  date: 0
+  start_time: 1
+  end_time: 2
+  subject: 3
+  room: 4
+  lecturer: 5
+  groups: 6
