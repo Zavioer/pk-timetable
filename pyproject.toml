@@ -35,6 +35,7 @@ markers = [
 dev = [
     "hatchling>=1.29.0",
     "pytest>=8.0",
+    "pytest-cov>=7.0.0",
     "pytest-mock>=3.14",
     "xlrd>=2.0",
 ]
