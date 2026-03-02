@@ -7,7 +7,7 @@ import openpyxl
 import pytest
 
 from pk_timetable.config import LayoutConfig
-from pk_timetable.parser import parse, _parse_time_range
+from pk_timetable.parser import parse, _parse_time_range, _parse_subject_and_description, _parse_description
 
 
 # ---------------------------------------------------------------------------
@@ -37,7 +37,7 @@ def _make_grid_xlsx(
 ) -> bytes:
     """Build a minimal grid-layout xlsx for testing.
 
-    Each entry in *blocks* is (date, [(time_range, subject_or_None), ...]).
+    Each entry in *blocks* is (date, [(time_range, raw_cell_or_None), ...]).
     Columns before Q are left empty; only Q, R, T are filled.
     """
     from openpyxl.utils import column_index_from_string
@@ -59,11 +59,11 @@ def _make_grid_xlsx(
         # Date in Q (first data row — simulates merged cell)
         ws.cell(row=data_row, column=q, value=block_date)
 
-        for slot_idx, (time_str, subject) in enumerate(slots):
+        for slot_idx, (time_str, raw_cell) in enumerate(slots):
             slot_row = data_row + slot_idx * time_slot_height
             ws.cell(row=slot_row, column=r, value=time_str)
-            if subject is not None:
-                ws.cell(row=slot_row, column=t, value=subject)
+            if raw_cell is not None:
+                ws.cell(row=slot_row, column=t, value=raw_cell)
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -75,23 +75,99 @@ def _make_grid_xlsx(
 # ---------------------------------------------------------------------------
 
 def test_parse_time_range_dot_separator() -> None:
-    result = _parse_time_range("8.00-10.30")
-    assert result == (time(8, 0), time(10, 30))
+    assert _parse_time_range("8.00-10.30") == (time(8, 0), time(10, 30))
 
 
 def test_parse_time_range_colon_separator() -> None:
-    result = _parse_time_range("8:00-10:30")
-    assert result == (time(8, 0), time(10, 30))
+    assert _parse_time_range("8:00-10:30") == (time(8, 0), time(10, 30))
 
 
 def test_parse_time_range_with_whitespace() -> None:
-    result = _parse_time_range(" 10.45 - 12.15 ")
-    assert result == (time(10, 45), time(12, 15))
+    assert _parse_time_range(" 10.45 - 12.15 ") == (time(10, 45), time(12, 15))
 
 
 def test_parse_time_range_invalid_returns_none() -> None:
     assert _parse_time_range("not-a-time") is None
     assert _parse_time_range("8.00") is None
+
+
+# ---------------------------------------------------------------------------
+# _parse_subject_and_description unit tests
+# ---------------------------------------------------------------------------
+
+def test_subject_only_no_description() -> None:
+    assert _parse_subject_and_description("Matematyka") == ("Matematyka", "")
+
+
+def test_split_by_multiple_spaces() -> None:
+    raw = "BiHSO                 lab.                      MŁ                s.135"
+    subject, desc = _parse_subject_and_description(raw)
+    assert subject == "BiHSO"
+    assert desc == "lab.\nMŁ\ns.135"
+
+
+def test_split_by_newlines() -> None:
+    raw = "Programowanie\nwykład\ndr inż. Kowalski"
+    subject, desc = _parse_subject_and_description(raw)
+    assert subject == "Programowanie"
+    assert desc == "wykład\ndr inż. Kowalski"
+
+
+def test_split_mixed_newlines_and_spaces() -> None:
+    raw = "Fizyka kwantowa\nwykład\nProf. Nowak                   ZDALNIE"
+    subject, desc = _parse_subject_and_description(raw)
+    assert subject == "Fizyka kwantowa"
+    assert desc == "wykład\nProf. Nowak\nZDALNIE"
+
+
+def test_subject_with_single_spaces_is_preserved() -> None:
+    raw = "Techniki projektowania frontendowego  wykład"
+    subject, desc = _parse_subject_and_description(raw)
+    assert subject == "Techniki projektowania frontendowego"
+    assert desc == "wykład"
+
+
+def test_leading_time_annotation_is_stripped() -> None:
+    raw = ("16:45-18:15                                          "
+           "Przykładowy przedmiot testowy  "
+           "wykład  dr hab. Jan Kowalski, prof. PK  ZDALNIE")
+    subject, desc = _parse_subject_and_description(raw)
+    assert subject == "Przykładowy przedmiot testowy"
+    assert desc == "wykład\ndr hab. Jan Kowalski, prof. PK\nZDALNIE"
+
+
+def test_empty_string_returns_empty() -> None:
+    assert _parse_subject_and_description("") == ("", "")
+
+
+# ---------------------------------------------------------------------------
+# _parse_description unit tests
+# ---------------------------------------------------------------------------
+
+def test_parse_description_three_lines() -> None:
+    assert _parse_description("lab.\nMŁ\ns.135") == ("lab.", "MŁ", "s.135")
+
+
+def test_parse_description_remote_on_own_line() -> None:
+    assert _parse_description("wykład\ndr Jan Kowalski\nZDALNIE") == ("wykład", "dr Jan Kowalski", "ZDALNIE")
+
+
+def test_parse_description_remote_glued_to_lecturer() -> None:
+    # Edge case: ZDALNIE not separated by 2+ spaces — lands in same token as lecturer
+    assert _parse_description("wykład\ndr Jan Kowalski ZDALNIE") == ("wykład", "dr Jan Kowalski", "ZDALNIE")
+
+
+def test_parse_description_zdalnie_case_insensitive() -> None:
+    # Detection is case-insensitive; room is always normalised to "ZDALNIE"
+    assert _parse_description("wykład\ndr Jan Kowalski zdalnie") == ("wykład", "dr Jan Kowalski", "ZDALNIE")
+
+
+def test_parse_description_empty() -> None:
+    assert _parse_description("") == ("", "", "")
+
+
+def test_parse_description_type_only() -> None:
+    assert _parse_description("wykład") == ("wykład", "", "")
 
 
 # ---------------------------------------------------------------------------
@@ -107,28 +183,37 @@ def test_parse_single_day_one_slot() -> None:
     assert e.start_time == time(8, 0)
     assert e.end_time == time(10, 30)
     assert e.subject == "Matematyka"
+    assert e.lecture_type == ""
+    assert e.lecturer == ""
+    assert e.room == ""
     assert e.groups == _GROUP
+
+
+def test_parse_cell_with_all_fields() -> None:
+    raw = "Matematyka  wykład  dr Kowalski  s.101"
+    data = _make_grid_xlsx([(_DATE, [("8.00-10.30", raw), (None, None), (None, None), (None, None)])])
+    e = parse(data, _LAYOUT)[0]
+    assert e.subject == "Matematyka"
+    assert e.lecture_type == "wykład"
+    assert e.lecturer == "dr Kowalski"
+    assert e.room == "s.101"
 
 
 def test_parse_single_day_multiple_slots() -> None:
     slots = [
         ("8.00-10.30", "Matematyka"),
         ("10.45-12.15", "Fizyka"),
-        ("12.30-14.00", None),        # no lecture in this slot
+        ("12.30-14.00", None),
         ("14.15-15.45", "Chemia"),
     ]
     data = _make_grid_xlsx([(_DATE, slots)])
     entries = parse(data, _LAYOUT)
     assert len(entries) == 3
-    subjects = [e.subject for e in entries]
-    assert "Matematyka" in subjects
-    assert "Fizyka" in subjects
-    assert "Chemia" in subjects
+    assert [e.subject for e in entries] == ["Matematyka", "Fizyka", "Chemia"]
 
 
 def test_parse_multiple_day_blocks() -> None:
-    d1 = date(2026, 1, 3)
-    d2 = date(2026, 1, 4)
+    d1, d2 = date(2026, 1, 3), date(2026, 1, 4)
     data = _make_grid_xlsx([
         (d1, [("8.00-10.30", "Matematyka"), (None, None), (None, None), (None, None)]),
         (d2, [("8.00-10.30", "Fizyka"),     (None, None), (None, None), (None, None)]),
@@ -140,32 +225,15 @@ def test_parse_multiple_day_blocks() -> None:
 
 
 def test_parse_empty_block_stops_iteration() -> None:
-    """A block with no date cell signals end of data; nothing after it is parsed."""
-    d1 = date(2026, 1, 3)
-    data = _make_grid_xlsx([
-        (d1, [("8.00-10.30", "Matematyka"), (None, None), (None, None), (None, None)]),
-    ])
-    entries = parse(data, _LAYOUT)
-    assert len(entries) == 1
+    data = _make_grid_xlsx([(_DATE, [("8.00-10.30", "Matematyka"), (None, None), (None, None), (None, None)])])
+    assert len(parse(data, _LAYOUT)) == 1
 
 
 def test_parse_all_empty_slots_yields_no_entries() -> None:
     data = _make_grid_xlsx([(_DATE, [(None, None), (None, None), (None, None), (None, None)])])
-    # date is written but time/subject are absent — no entries expected
-    # However the date IS written, so the block is detected.
-    # All slots are empty → 0 entries from this block.
-    entries = parse(data, _LAYOUT)
-    assert entries == []
-
-
-def test_parse_room_and_lecturer_are_empty() -> None:
-    data = _make_grid_xlsx([(_DATE, [("8.00-10.30", "Matematyka"), (None, None), (None, None), (None, None)])])
-    e = parse(data, _LAYOUT)[0]
-    assert e.room == ""
-    assert e.lecturer == ""
+    assert parse(data, _LAYOUT) == []
 
 
 def test_parse_groups_comes_from_header_row() -> None:
     data = _make_grid_xlsx([(_DATE, [("8.00-10.30", "Matematyka"), (None, None), (None, None), (None, None)])])
-    e = parse(data, _LAYOUT)[0]
-    assert e.groups == _GROUP
+    assert parse(data, _LAYOUT)[0].groups == _GROUP

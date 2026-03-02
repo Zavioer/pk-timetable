@@ -23,17 +23,15 @@ def _dt(d: date, t: time) -> str:
     return datetime.combine(d, t).isoformat()
 
 
-def _entry_to_event(entry: TimetableEntry, entry_id: str) -> dict[str, Any]:
-    description_parts = []
-    if entry.lecturer:
-        description_parts.append(f"Prowadzący: {entry.lecturer}")
-    if entry.groups:
-        description_parts.append(f"Grupy: {entry.groups}")
+def _build_description(entry: TimetableEntry) -> str:
+    return "\n".join(filter(None, [entry.lecture_type, entry.lecturer]))
 
+
+def _entry_to_event(entry: TimetableEntry, entry_id: str) -> dict[str, Any]:
     return {
         "summary": entry.subject,
         "location": entry.room,
-        "description": "\n".join(description_parts),
+        "description": _build_description(entry),
         "start": {"dateTime": _dt(entry.date, entry.start_time)},
         "end": {"dateTime": _dt(entry.date, entry.end_time)},
         "extendedProperties": {

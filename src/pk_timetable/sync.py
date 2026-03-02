@@ -18,23 +18,17 @@ def entry_id(entry: TimetableEntry) -> str:
 
 def _event_matches(entry: TimetableEntry, event: dict) -> bool:
     """Return True if an existing calendar event already reflects *entry* exactly."""
+    from pk_timetable.gcal import _dt, _build_description
     summary_ok = event.get("summary", "") == entry.subject
-    location_ok = event.get("location", "") == (entry.room or "")
+    location_ok = event.get("location", "") == entry.room
+    description_ok = event.get("description", "") == _build_description(entry)
 
     start = (event.get("start") or {}).get("dateTime", "")
     end = (event.get("end") or {}).get("dateTime", "")
-    from pk_timetable.gcal import _dt
     start_ok = start.startswith(_dt(entry.date, entry.start_time))
     end_ok = end.startswith(_dt(entry.date, entry.end_time))
 
-    desc_parts = []
-    if entry.lecturer:
-        desc_parts.append(f"Prowadzący: {entry.lecturer}")
-    if entry.groups:
-        desc_parts.append(f"Grupy: {entry.groups}")
-    description_ok = event.get("description", "") == "\n".join(desc_parts)
-
-    return summary_ok and location_ok and start_ok and end_ok and description_ok
+    return summary_ok and location_ok and description_ok and start_ok and end_ok
 
 
 @dataclass

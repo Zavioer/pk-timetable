@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 from dataclasses import dataclass
 from datetime import date, time
 from typing import Any
@@ -13,6 +14,9 @@ from pk_timetable.config import LayoutConfig
 
 logger = logging.getLogger(__name__)
 
+# Matches a newline (with optional surrounding spaces) or 2+ consecutive spaces.
+_CELL_SEP = re.compile(r"\s*\n\s*|\s{2,}")
+
 
 @dataclass(frozen=True)
 class TimetableEntry:
@@ -20,8 +24,9 @@ class TimetableEntry:
     start_time: time
     end_time: time
     subject: str
-    room: str
-    lecturer: str
+    lecture_type: str  # e.g. "wykład", "lab.", "P", "ćwiczenia"
+    lecturer: str      # professor name or abbreviation
+    room: str          # room identifier, or "ZDALNIE" for remote sessions
     groups: str
 
 
@@ -49,6 +54,59 @@ def _to_date(value: Any) -> date | None:
             except ValueError:
                 continue
     return None
+
+
+def _parse_subject_and_description(raw: str) -> tuple[str, str]:
+    """Split a raw cell value into subject name and additional info.
+
+    Tokens are separated by newlines or runs of 2+ spaces.  The first token
+    is the subject; the rest are joined with newline as the description.
+
+    Special case: if the first token looks like a time range (e.g. "16:45-18:15"),
+    it is a scheduling annotation and is dropped before extracting the subject.
+    """
+    tokens = [t.strip() for t in _CELL_SEP.split(raw)]
+    tokens = [t for t in tokens if t]
+    if not tokens:
+        return "", ""
+    if _parse_time_range(tokens[0]) is not None:
+        tokens = tokens[1:]
+    if not tokens:
+        return "", ""
+    return tokens[0], "\n".join(tokens[1:])
+
+
+def _parse_description(description: str) -> tuple[str, str, str]:
+    """Parse a description string into (lecture_type, lecturer, room).
+
+    The description is expected to have lines in order: type / lecturer / room.
+
+    Edge case: when ZDALNIE is glued to the lecturer name with a single space
+    (e.g. "dr hab. Kowalski ZDALNIE"), it is split off as the room value.
+    ZDALNIE is only detected at the end of the last remaining line.
+    """
+    if not description:
+        return "", "", ""
+
+    lines = [ln.strip() for ln in description.split("\n") if ln.strip()]
+    lecture_type = lines[0] if lines else ""
+    rest = lines[1:]
+
+    if not rest:
+        return lecture_type, "", ""
+
+    last = rest[-1]
+    if last.upper() == "ZDALNIE":
+        room = "ZDALNIE"
+        lecturer = rest[0] if len(rest) > 1 else ""
+    elif last.upper().endswith(" ZDALNIE"):
+        room = "ZDALNIE"
+        lecturer = last[: -len(" ZDALNIE")].strip()  # strips the trailing " zdalnie" variant too
+    else:
+        lecturer = rest[0]
+        room = rest[1] if len(rest) > 1 else ""
+
+    return lecture_type, lecturer, room
 
 
 def _parse_time_range(s: str) -> tuple[time, time] | None:
@@ -143,13 +201,16 @@ def parse(data: bytes, layout: LayoutConfig) -> list[TimetableEntry]:
                 continue
 
             start_time, end_time = times
+            subject, description = _parse_subject_and_description(str(subject_val))
+            lecture_type, lecturer, room = _parse_description(description)
             entries.append(TimetableEntry(
                 date=entry_date,
                 start_time=start_time,
                 end_time=end_time,
-                subject=str(subject_val).strip(),
-                room="",
-                lecturer="",
+                subject=subject,
+                lecture_type=lecture_type,
+                lecturer=lecturer,
+                room=room,
                 groups=group_name,
             ))
 

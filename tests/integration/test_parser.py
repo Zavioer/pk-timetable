@@ -46,7 +46,7 @@ def test_write_parsed_entries_csv(timetable_bytes: bytes, integration_config: Co
     _OUTPUT_DIR.mkdir(exist_ok=True)
     with _CSV_PATH.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.writer(fh)
-        writer.writerow(["group", "date", "start_time", "end_time", "subject"])
+        writer.writerow(["group", "date", "start_time", "end_time", "subject", "lecture_type", "lecturer", "room"])
         for e in entries:
             writer.writerow([
                 e.groups,
@@ -54,6 +54,9 @@ def test_write_parsed_entries_csv(timetable_bytes: bytes, integration_config: Co
                 e.start_time.strftime("%H:%M"),
                 e.end_time.strftime("%H:%M"),
                 e.subject,
+                e.lecture_type,
+                e.lecturer,
+                e.room,
             ])
 
     logger.info("Wrote %d entries to %s", len(entries), _CSV_PATH)

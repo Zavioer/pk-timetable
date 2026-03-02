@@ -12,8 +12,9 @@ _E1 = TimetableEntry(
     start_time=time(8, 0),
     end_time=time(9, 30),
     subject="Matematyka",
-    room="A101",
+    lecture_type="wykład",
     lecturer="Dr Kowalski",
+    room="s. A101",
     groups="GR1",
 )
 _E2 = TimetableEntry(
@@ -21,25 +22,21 @@ _E2 = TimetableEntry(
     start_time=time(10, 0),
     end_time=time(11, 30),
     subject="Fizyka",
-    room="B202",
+    lecture_type="lab.",
     lecturer="Prof. Nowak",
+    room="s. B202",
     groups="GR2",
 )
 
 
 def _make_event(entry: TimetableEntry, google_id: str = "gcal-id-1") -> dict:
     eid = entry_id(entry)
-    desc_parts = []
-    if entry.lecturer:
-        desc_parts.append(f"Prowadzący: {entry.lecturer}")
-    if entry.groups:
-        desc_parts.append(f"Grupy: {entry.groups}")
-    from pk_timetable.gcal import _dt
+    from pk_timetable.gcal import _dt, _build_description
     return {
         "id": google_id,
         "summary": entry.subject,
         "location": entry.room,
-        "description": "\n".join(desc_parts),
+        "description": _build_description(entry),
         "start": {"dateTime": _dt(entry.date, entry.start_time)},
         "end": {"dateTime": _dt(entry.date, entry.end_time)},
         "extendedProperties": {"private": {"source": "pk-timetable", "entry_id": eid}},
@@ -82,8 +79,9 @@ def test_changed_entry_goes_to_update() -> None:
         start_time=_E1.start_time,
         end_time=_E1.end_time,
         subject=_E1.subject,
-        room="NEW-ROOM",  # room changed
+        lecture_type=_E1.lecture_type,
         lecturer=_E1.lecturer,
+        room="s. NEW-ROOM",  # room changed
         groups=_E1.groups,
     )
     plan = compute_diff([modified], existing)

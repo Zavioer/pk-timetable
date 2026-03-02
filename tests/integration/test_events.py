@@ -29,13 +29,15 @@ def test_event_bodies_are_well_formed(timetable_bytes: bytes, integration_config
         event = _entry_to_event(e, eid)
 
         logger.info(
-            "entry_id=%s  summary=%r  start=%s  end=%s  location=%r",
+            "entry_id=%s  summary=%r  start=%s  end=%s",
             eid, event["summary"],
             event["start"]["dateTime"], event["end"]["dateTime"],
-            event.get("location", ""),
         )
 
+        from pk_timetable.gcal import _build_description
         assert event["summary"] == e.subject
+        assert event["location"] == e.room
+        assert event["description"] == _build_description(e)
         assert event["start"]["dateTime"]
         assert event["end"]["dateTime"]
         assert event["extendedProperties"]["private"]["source"] == "pk-timetable"
