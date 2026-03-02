@@ -3,18 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 
-class ColumnMap(BaseModel):
-    date: int | str
-    start_time: int | str
-    end_time: int | str
-    subject: int | str
-    room: int | str | None = None
-    lecturer: int | str | None = None
-    groups: int | str | None = None
-    header_row: int = 0
+class LayoutConfig(BaseModel):
+    first_block_row: int = 7        # 1-indexed row of the first block's header line
+    block_height: int = 13          # rows per day block (1 header + 12 data)
+    time_slot_height: int = 3       # rows per time slot
+    date_col: str | int = "Q"       # column holding the date (merged in data rows)
+    time_col: str | int = "R"       # column holding the time range, e.g. "8.00-10.30"
+    group_col: str | int = "T"      # which group column to extract subjects from
 
 
 class Config(BaseModel):
@@ -22,12 +20,7 @@ class Config(BaseModel):
     calendar_id: str
     credentials_path: Path
     state_dir: Path = Path("state")
-    columns: ColumnMap
-
-    @field_validator("credentials_path", "state_dir", mode="before")
-    @classmethod
-    def to_path(cls, v: object) -> Path:
-        return Path(str(v))
+    layout: LayoutConfig
 
 
 def load_config(path: Path | str = "config.yaml") -> Config:

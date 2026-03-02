@@ -27,10 +27,14 @@ packages = ["src/pk_timetable"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: tests that require tests/resources/test_calendar.xlsx and config.yaml",
+]
 
 [dependency-groups]
 dev = [
     "hatchling>=1.29.0",
     "pytest>=8.0",
     "pytest-mock>=3.14",
+    "xlrd>=2.0",
 ]

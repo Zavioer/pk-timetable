@@ -41,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     # 3. Parse
-    entries = parser.parse(data, cfg.columns)
+    entries = parser.parse(data, cfg.layout)
     if not entries:
         logger.warning("No entries parsed from timetable; aborting to avoid data loss")
         return 1
