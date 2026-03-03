@@ -27,13 +27,13 @@ def _build_description(entry: TimetableEntry) -> str:
     return "\n".join(filter(None, [entry.lecture_type, entry.lecturer]))
 
 
-def _entry_to_event(entry: TimetableEntry, entry_id: str) -> dict[str, Any]:
+def _entry_to_event(entry: TimetableEntry, entry_id: str, timezone: str) -> dict[str, Any]:
     return {
         "summary": entry.subject,
         "location": entry.room,
         "description": _build_description(entry),
-        "start": {"dateTime": _dt(entry.date, entry.start_time)},
-        "end": {"dateTime": _dt(entry.date, entry.end_time)},
+        "start": {"dateTime": _dt(entry.date, entry.start_time), "timeZone": timezone},
+        "end": {"dateTime": _dt(entry.date, entry.end_time), "timeZone": timezone},
         "extendedProperties": {
             "private": {
                 _SOURCE_KEY: _SOURCE_VALUE,
@@ -44,7 +44,8 @@ def _entry_to_event(entry: TimetableEntry, entry_id: str) -> dict[str, Any]:
 
 
 class GCalClient:
-    def __init__(self, credentials_path: Path, calendar_id: str) -> None:
+    def __init__(self, credentials_path: Path, calendar_id: str, timezone: str) -> None:
+        self._timezone = timezone
         creds = service_account.Credentials.from_service_account_file(
             str(credentials_path), scopes=_SCOPES
         )
@@ -80,12 +81,12 @@ class GCalClient:
         return events
 
     def create_event(self, entry: TimetableEntry, entry_id: str) -> None:
-        body = _entry_to_event(entry, entry_id)
+        body = _entry_to_event(entry, entry_id, self._timezone)
         self._service.events().insert(calendarId=self._calendar_id, body=body).execute()
         logger.debug("Created event: %s on %s", entry.subject, entry.date)
 
     def update_event(self, event_id: str, entry: TimetableEntry, entry_id: str) -> None:
-        body = _entry_to_event(entry, entry_id)
+        body = _entry_to_event(entry, entry_id, self._timezone)
         self._service.events().update(
             calendarId=self._calendar_id, eventId=event_id, body=body
         ).execute()

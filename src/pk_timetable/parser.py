@@ -8,9 +8,32 @@ from datetime import date, time
 from typing import Any
 
 import openpyxl
+import xlrd
 from openpyxl.utils import column_index_from_string
 
 from pk_timetable.config import LayoutConfig
+
+_XLS_MAGIC = b"\xD0\xCF\x11\xE0"
+
+
+def _xls_to_xlsx(data: bytes) -> bytes:
+    """Convert legacy .xls bytes to .xlsx bytes via xlrd + openpyxl."""
+    book = xlrd.open_workbook(file_contents=data)
+    sheet = book.sheet_by_index(0)
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    for row_idx in range(sheet.nrows):
+        row = []
+        for col_idx in range(sheet.ncols):
+            cell = sheet.cell(row_idx, col_idx)
+            if cell.ctype == xlrd.XL_CELL_DATE:
+                row.append(xlrd.xldate_as_datetime(cell.value, book.datemode))
+            else:
+                row.append(cell.value)
+        ws.append(row)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +178,9 @@ def parse(data: bytes, layout: LayoutConfig) -> list[TimetableEntry]:
       spans ``layout.time_slot_height`` rows); group column holds the subject
       name (merged when a lecture exists, empty otherwise).
     """
+    if data[:4] == _XLS_MAGIC:
+        logger.debug("Detected legacy .xls format — converting to .xlsx")
+        data = _xls_to_xlsx(data)
     wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
     ws = wb.active
 

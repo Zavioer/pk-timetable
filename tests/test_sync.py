@@ -31,16 +31,9 @@ _E2 = TimetableEntry(
 
 def _make_event(entry: TimetableEntry, google_id: str = "gcal-id-1") -> dict:
     eid = entry_id(entry)
-    from pk_timetable.gcal import _dt, _build_description
-    return {
-        "id": google_id,
-        "summary": entry.subject,
-        "location": entry.room,
-        "description": _build_description(entry),
-        "start": {"dateTime": _dt(entry.date, entry.start_time)},
-        "end": {"dateTime": _dt(entry.date, entry.end_time)},
-        "extendedProperties": {"private": {"source": "pk-timetable", "entry_id": eid}},
-    }
+    from pk_timetable.gcal import _entry_to_event
+    body = _entry_to_event(entry, eid, "Europe/Warsaw")
+    return {"id": google_id, **body}
 
 
 def test_entry_id_is_stable() -> None:

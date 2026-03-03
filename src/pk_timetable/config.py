@@ -10,7 +10,7 @@ from pydantic import BaseModel
 # Env-var → config field mapping (env var takes precedence over config.yaml)
 _ENV_OVERRIDES: list[tuple[str, str]] = [
     ("GOOGLE_CALENDAR_ID", "calendar_id"),
-    ("TIMETABLE_URL", "timetable_url"),
+    ("TIMETABLE_PAGE_URL", "timetable_page_url"),
     ("GOOGLE_APPLICATION_CREDENTIALS", "credentials_path"),
 ]
 
@@ -25,8 +25,11 @@ class LayoutConfig(BaseModel):
 
 
 class Config(BaseModel):
-    timetable_url: str
+    timetable_page_url: str
+    link_text_pattern: str = "Informatyka.*pobierz"
+    section_heading_pattern: str = "STUDIA NIESTACJONARNE"
     calendar_id: str
+    timezone: str = "Europe/Warsaw"
     credentials_path: Path
     state_dir: Path = Path("state")
     layout: LayoutConfig

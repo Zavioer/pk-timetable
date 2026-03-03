@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from pk_timetable.config import load_config
-from pk_timetable import fetcher, parser
+from pk_timetable import fetcher, parser, scraper
 from pk_timetable.gcal import GCalClient
 from pk_timetable.sync import apply_sync_plan, compute_diff
 
@@ -32,8 +32,11 @@ def main(argv: list[str] | None = None) -> int:
     cfg = load_config(args.config)
     cfg.state_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Fetch
-    data = fetcher.fetch(cfg.timetable_url)
+    # 1. Scrape index page → resolve direct file URL → fetch
+    file_url = scraper.find_timetable_url(
+        cfg.timetable_page_url, cfg.link_text_pattern, cfg.section_heading_pattern
+    )
+    data = fetcher.fetch(file_url)
 
     # 2. Change detection
     if not args.force and not fetcher.has_changed(data, cfg.state_dir):
@@ -55,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("Would sync %d timetable entries", len(entries))
         return 0
 
-    client = GCalClient(cfg.credentials_path, cfg.calendar_id)
+    client = GCalClient(cfg.credentials_path, cfg.calendar_id, cfg.timezone)
     existing = client.list_managed_events(time_min=today - timedelta(days=30), time_max=time_max)
 
     # 5. Diff

@@ -1,4 +1,6 @@
-timetable_url: "https://example.com/timetable.xls"
+timetable_page_url: "https://it.pk.edu.pl/studenci/na-studiach/rozklady-zajec/"
+link_text_pattern: "Informatyka.*pobierz"
+section_heading_pattern: "STUDIA NIESTACJONARNE"
 calendar_id: ""  # leave blank and set GOOGLE_CALENDAR_ID in .env instead
 credentials_path: "credentials/service_account.json"
 state_dir: "state"

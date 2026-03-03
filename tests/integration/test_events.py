@@ -26,7 +26,7 @@ def test_event_bodies_are_well_formed(timetable_bytes: bytes, integration_config
 
     for e in entries:
         eid = entry_id(e)
-        event = _entry_to_event(e, eid)
+        event = _entry_to_event(e, eid, integration_config.timezone)
 
         logger.info(
             "entry_id=%s  summary=%r  start=%s  end=%s",

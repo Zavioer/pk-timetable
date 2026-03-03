@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import time
 from dataclasses import dataclass
 
 from pk_timetable.gcal import GCalClient, _ENTRY_ID_KEY
@@ -79,14 +80,20 @@ def compute_diff(entries: list[TimetableEntry], existing_events: list[dict]) -> 
     return plan
 
 
+_API_DELAY = 0.15  # seconds between API calls — stays well under the 10 req/s limit
+
+
 def apply_sync_plan(plan: SyncPlan, client: GCalClient) -> None:
     for e in plan.to_create:
         client.create_event(e, entry_id(e))
+        time.sleep(_API_DELAY)
 
     for google_id, e in plan.to_update:
         client.update_event(google_id, e, entry_id(e))
+        time.sleep(_API_DELAY)
 
     for google_id in plan.to_delete:
         client.delete_event(google_id)
+        time.sleep(_API_DELAY)
 
     logger.info("Applied sync plan: %s", plan.summary())
