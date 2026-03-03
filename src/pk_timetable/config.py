@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import yaml
+from dotenv import load_dotenv
 from pydantic import BaseModel
+
+# Env-var → config field mapping (env var takes precedence over config.yaml)
+_ENV_OVERRIDES: list[tuple[str, str]] = [
+    ("GOOGLE_CALENDAR_ID", "calendar_id"),
+    ("TIMETABLE_URL", "timetable_url"),
+    ("GOOGLE_APPLICATION_CREDENTIALS", "credentials_path"),
+]
 
 
 class LayoutConfig(BaseModel):
@@ -24,6 +33,11 @@ class Config(BaseModel):
 
 
 def load_config(path: Path | str = "config.yaml") -> Config:
+    load_dotenv()  # no-op if .env is absent; never overrides already-set env vars
     with open(path) as fh:
         raw = yaml.safe_load(fh)
+    for env_key, config_key in _ENV_OVERRIDES:
+        value = os.environ.get(env_key)
+        if value:
+            raw[config_key] = value
     return Config.model_validate(raw)

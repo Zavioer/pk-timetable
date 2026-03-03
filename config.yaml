@@ -1,5 +1,5 @@
 timetable_url: "https://example.com/timetable.xls"
-calendar_id: "your-calendar-id@group.calendar.google.com"
+calendar_id: ""  # leave blank and set GOOGLE_CALENDAR_ID in .env instead
 credentials_path: "credentials/service_account.json"
 state_dir: "state"
 

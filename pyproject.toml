@@ -10,6 +10,7 @@ dependencies = [
     "google-auth>=2.37",
     "pydantic>=2.10",
     "pyyaml>=6.0",
+    "python-dotenv>=1.2.2",
 ]
 
 [project.scripts]
