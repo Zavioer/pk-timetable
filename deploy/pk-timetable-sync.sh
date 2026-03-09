@@ -1,6 +1,6 @@
 #!/bin/sh
 # Wrapper script called by crond.
-# Logs go to syslog (readable via: logread -t pk-timetable)
+# Logs go to syslog (readable via: logread | grep pk-timetable)
 
 WORKDIR="/home/frog/pk-timetable"
 UV="/home/frog/.local/bin/uv"
@@ -16,6 +16,7 @@ rc=$?
 
 if [ $rc -eq 0 ]; then
     log "OK: $output"
+    date -Iseconds > "$WORKDIR/state/last_success.txt"
 else
     log "FAILED (exit $rc): $output"
 fi

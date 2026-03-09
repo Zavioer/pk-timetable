@@ -16,7 +16,7 @@ Transfer the source (without `.git`) from your local machine, then install depen
 
 ```sh
 # On local machine:
-**git archive HEAD | ssh frog@<vps> 'mkdir -p /home/frog/pk-timetable && tar -x -C /home/frog/pk-timetable'**
+git archive HEAD | ssh frog@<vps> 'mkdir -p /home/frog/pk-timetable && tar -x -C /home/frog/pk-timetable'
 ```
 
 Then on the VPS:
@@ -56,7 +56,7 @@ chmod +x ~/bin/pk-timetable-sync
 crontab deploy/crontab.txt   # runs at 06:00 and 18:00 daily
 ```
 
-Logs: `logread -t pk-timetable`
+Logs: `logread | grep pk-timetable`
 
 ## Optional: OpenRC service (manual one-shot runs)
 

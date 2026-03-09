@@ -28,3 +28,5 @@ tests/output/
 # Coverage report
 htmlcov/
 .coverage
+
+.idea
