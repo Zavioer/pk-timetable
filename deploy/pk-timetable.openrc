@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+# OpenRC service for manual one-shot runs.
+# Install to: /etc/init.d/pk-timetable
+# Usage: rc-service pk-timetable start   (runs sync once)
+
+description="PK Timetable Google Calendar sync"
+command="/home/frog/bin/pk-timetable-sync"
+command_user="frog"
+
+depend() {
+    need net
+    after firewall
+}
