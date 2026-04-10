@@ -12,19 +12,40 @@ Target: Alpine/OpenRC VPS. Runs as user `frog` under cron.
 
 ## Install
 
-Transfer the source (without `.git`) from your local machine, then install dependencies on the VPS.
+Pack and transfer the source from your local machine, then install dependencies on the VPS.
 
 ```sh
-# On local machine:
-git archive HEAD | ssh frog@<vps> 'mkdir -p /home/frog/pk-timetable && tar -x -C /home/frog/pk-timetable'
+# On local machine — create archive excluding .git, venv, and cache:
+tar -czf /tmp/pk-timetable.tar.gz \
+    --exclude='.git' \
+    --exclude='.venv' \
+    --exclude='__pycache__' \
+    -C /path/to/workspace pk-timetable
+
+# Transfer (adjust port and host):
+scp -P <port> /tmp/pk-timetable.tar.gz frog@<vps>:/tmp/
 ```
 
 Then on the VPS:
 
 ```sh
-cd /home/frog/pk-timetable
+mkdir -p /home/frog/pk-timetable
+tar -xzf /tmp/pk-timetable.tar.gz -C /home/frog/
 uv sync
 ```
+
+## Update
+
+To push a newer version, repeat the pack+transfer step above, then on the VPS:
+
+```sh
+tar -xzf /tmp/pk-timetable.tar.gz -C /home/frog/
+cp deploy/pk-timetable-sync.sh ~/bin/pk-timetable-sync
+chmod +x ~/bin/pk-timetable-sync
+uv sync
+```
+
+`tar -x` overwrites existing files but never deletes files not in the archive, so `.env`, `credentials/`, and `state/` are safe.
 
 ## Configure
 
@@ -62,9 +83,7 @@ uv run pk-timetable --dry-run
 ```sh
 mkdir -p ~/bin
 cp deploy/pk-timetable-sync.sh ~/bin/pk-timetable-sync
-chmod 
-
-
+chmod +x ~/bin/pk-timetable-sync
 crontab deploy/crontab.txt   # runs at 06:00 and 18:00 daily
 ```
 

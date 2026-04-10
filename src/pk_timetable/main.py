@@ -9,7 +9,7 @@ from pathlib import Path
 from pk_timetable.config import load_config
 from pk_timetable import fetcher, parser, scraper
 from pk_timetable.gcal import GCalClient
-from pk_timetable.notify import format_sync_message, send_discord
+from pk_timetable.notify import format_sync_message, send_discord, send_discord_heartbeat
 from pk_timetable.sync import apply_sync_plan, compute_diff
 
 logging.basicConfig(
@@ -42,6 +42,8 @@ def main(argv: list[str] | None = None) -> int:
     # 2. Change detection
     if not args.force and not fetcher.has_changed(data, cfg.state_dir):
         logger.info("Timetable unchanged — nothing to do")
+        if cfg.discord_webhook_url:
+            send_discord_heartbeat(cfg.discord_webhook_url, "timetable file unchanged")
         return 0
 
     # 3. Parse
@@ -68,6 +70,8 @@ def main(argv: list[str] | None = None) -> int:
     if plan.is_empty():
         logger.info("Calendar already up to date")
         fetcher.save_hash(data, cfg.state_dir)
+        if cfg.discord_webhook_url:
+            send_discord_heartbeat(cfg.discord_webhook_url, "calendar already up to date")
         return 0
 
     # 6. Apply

@@ -64,3 +64,8 @@ def send_discord(webhook_url: str, message: str) -> None:
         logger.debug("Discord notification sent")
     except requests.RequestException as exc:
         logger.warning("Failed to send Discord notification: %s", exc)
+
+
+def send_discord_heartbeat(webhook_url: str, reason: str) -> None:
+    """Send a short 'all good, nothing changed' ping so silence doesn't look like failure."""
+    send_discord(webhook_url, f"**Timetable sync OK** — {reason}")
