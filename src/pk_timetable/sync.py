@@ -19,8 +19,8 @@ def entry_id(entry: TimetableEntry) -> str:
 
 def _event_matches(entry: TimetableEntry, event: dict) -> bool:
     """Return True if an existing calendar event already reflects *entry* exactly."""
-    from pk_timetable.gcal import _dt, _build_description
-    summary_ok = event.get("summary", "") == entry.subject
+    from pk_timetable.gcal import _dt, _build_description, _build_summary
+    summary_ok = event.get("summary", "") == _build_summary(entry)
     location_ok = event.get("location", "") == entry.room
     description_ok = event.get("description", "") == _build_description(entry)
 

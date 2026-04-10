@@ -23,13 +23,34 @@ def _dt(d: date, t: time) -> str:
     return datetime.combine(d, t).isoformat()
 
 
+_LECTURE_TYPE_LABELS: dict[str, str] = {
+    "wykład": "Wykład",
+    "wyklad": "Wykład",
+    "lab.": "Lab",
+    "lab": "Lab",
+    "laboratorium": "Lab",
+    "p": "Projekt",
+    "projekt": "Projekt",
+    "ćwiczenia": "Ćwiczenia",
+    "ćw.": "Ćwiczenia",
+    "cwiczenia": "Ćwiczenia",
+}
+
+
+def _build_summary(entry: TimetableEntry) -> str:
+    if not entry.lecture_type:
+        return entry.subject
+    label = _LECTURE_TYPE_LABELS.get(entry.lecture_type.lower().strip(), entry.lecture_type.strip(" .").capitalize())
+    return f"[{label}] {entry.subject}"
+
+
 def _build_description(entry: TimetableEntry) -> str:
     return "\n".join(filter(None, [entry.lecture_type, entry.lecturer]))
 
 
 def _entry_to_event(entry: TimetableEntry, entry_id: str, timezone: str) -> dict[str, Any]:
     return {
-        "summary": entry.subject,
+        "summary": _build_summary(entry),
         "location": entry.room,
         "description": _build_description(entry),
         "start": {"dateTime": _dt(entry.date, entry.start_time), "timeZone": timezone},
