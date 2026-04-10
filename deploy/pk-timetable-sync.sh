@@ -8,11 +8,11 @@ TAG="pk-timetable"
 
 log() { logger -t "$TAG" "$*"; }
 
-notify() {
+notify_failure() {
     [ -z "$DISCORD_WEBHOOK_URL" ] && return
     curl -s -X POST "$DISCORD_WEBHOOK_URL" \
         -H "Content-Type: application/json" \
-        -d "{\"content\": \"$1\"}"
+        -d "{\"content\": \"**pk-timetable: FAILED** (exit $1)\"}"
 }
 
 log "Starting sync"
@@ -27,10 +27,9 @@ rc=$?
 if [ $rc -eq 0 ]; then
     log "OK: $output"
     date -Iseconds > "$WORKDIR/state/last_success.txt"
-    notify "pk-timetable: sync OK $(date -Iseconds)"
 else
     log "FAILED (exit $rc): $output"
-    notify "pk-timetable: FAILED (exit $rc)"
+    notify_failure "$rc"
 fi
 
 exit $rc

@@ -9,6 +9,7 @@ from pathlib import Path
 from pk_timetable.config import load_config
 from pk_timetable import fetcher, parser, scraper
 from pk_timetable.gcal import GCalClient
+from pk_timetable.notify import format_sync_message, send_discord
 from pk_timetable.sync import apply_sync_plan, compute_diff
 
 logging.basicConfig(
@@ -70,11 +71,18 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     # 6. Apply
+    event_by_id = {ev["id"]: ev for ev in existing}
     apply_sync_plan(plan, client)
 
     # 7. Persist hash only after a fully successful sync
     fetcher.save_hash(data, cfg.state_dir)
     logger.info("Sync complete")
+
+    # 8. Notify Discord with a diff summary
+    if cfg.discord_webhook_url:
+        message = format_sync_message(plan, event_by_id)
+        send_discord(cfg.discord_webhook_url, message)
+
     return 0
 
 

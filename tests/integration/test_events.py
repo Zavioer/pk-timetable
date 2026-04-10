@@ -34,8 +34,8 @@ def test_event_bodies_are_well_formed(timetable_bytes: bytes, integration_config
             event["start"]["dateTime"], event["end"]["dateTime"],
         )
 
-        from pk_timetable.gcal import _build_description
-        assert event["summary"] == e.subject
+        from pk_timetable.gcal import _build_description, _build_summary
+        assert event["summary"] == _build_summary(e)
         assert event["location"] == e.room
         assert event["description"] == _build_description(e)
         assert event["start"]["dateTime"]

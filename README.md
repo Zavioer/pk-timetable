@@ -26,6 +26,16 @@ layout:
 Place the Google service account JSON at `credentials/service_account.json`.
 The service account must have the Calendar API enabled and editor access to the target calendar.
 
+### Discord notifications (optional)
+
+Set `DISCORD_WEBHOOK_URL` in your `.env` file (or as an environment variable) to receive a message in Discord after each sync that produces changes. The message lists every created (➕), updated (✏️), and deleted (🗑️) event with its title, date, and time range.
+
+```
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+```
+
+Get the URL from your Discord channel: **Settings → Integrations → Webhooks → New Webhook → Copy Webhook URL**. Failures to deliver the notification are logged as warnings but never abort the sync.
+
 ### Running
 
 ```bash

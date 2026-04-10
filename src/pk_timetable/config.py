@@ -12,6 +12,7 @@ _ENV_OVERRIDES: list[tuple[str, str]] = [
     ("GOOGLE_CALENDAR_ID", "calendar_id"),
     ("TIMETABLE_PAGE_URL", "timetable_page_url"),
     ("GOOGLE_APPLICATION_CREDENTIALS", "credentials_path"),
+    ("DISCORD_WEBHOOK_URL", "discord_webhook_url"),
 ]
 
 
@@ -33,6 +34,7 @@ class Config(BaseModel):
     credentials_path: Path
     state_dir: Path = Path("state")
     layout: LayoutConfig
+    discord_webhook_url: str | None = None
 
 
 def load_config(path: Path | str = "config.yaml") -> Config:
