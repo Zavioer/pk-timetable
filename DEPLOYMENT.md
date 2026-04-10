@@ -52,7 +52,9 @@ uv run pk-timetable --dry-run
 ```sh
 mkdir -p ~/bin
 cp deploy/pk-timetable-sync.sh ~/bin/pk-timetable-sync
-chmod +x ~/bin/pk-timetable-sync
+chmod 
+
+
 crontab deploy/crontab.txt   # runs at 06:00 and 18:00 daily
 ```
 
